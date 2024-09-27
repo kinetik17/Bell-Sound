@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-Minute Stopwatch with Alarm and Interactive Time Bar</title>
+    <style>
+        @font-face {
+            font-family: 'Space Grotesk';
+            font-style: normal;
+            font-weight: 600;
+            src: url(https://cdn.dvmgc.com/fonts/v1/spacegrotesk/isJmSxkr43dWG546mC3W5r.ttf);
+        }
+
+        body, html {
+            background-color: black;
+            color: white;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        }
+
+        .container {
+            color: white;
+            height: 100%;
+            text-align: center;
+            width: 100%;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-container {
+            height: 380px;
+        }
+
+        .timer {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 128px;
+            font-variant-numeric: tabular-nums;
+            font-weight: normal; /* Changed from 900 to normal */
+            height: 160px;
+            letter-spacing: -2px;
+            line-height: 160px;
+            width: 500px;
+            color: white;
+            background-color: black;
+            margin: 20px auto;
+            text-shadow: 
+                -1px -1px 0 white,
+                1px -1px 0 white,
+                -1px 1px 0 white,
+                1px 1px 0 white,
+                2px 2px 0 white;
+            -webkit-text-stroke: 2px white;
+        }
+
+        .button {
+            align-items: flex-start;
+            appearance: auto;
+            box-sizing: border-box;
+            cursor: pointer;
+            height: 40px;
+            padding: 10px 30px;
+            display: inline-block;
+            border: 2px solid white;
+            border-radius: 100px;
+            margin: 6px;
+            background-color: black;
+            color: white;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #button-1 { width: 96px; }
+        #button-2 { width: 104px; }
+        #button-3 { width: 96px; }
+
+        .time-bar-container {
+            width: 500px;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            margin: 0 auto 20px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .time-bar {
+            width: 0%;
+            height: 100%;
+            background-color: white;
+            transition: width 0.1s linear;
+        }
+
+        @media (max-width: 768px) {
+            .button {
+                padding: 0.25rem 0.5rem !important;
+                margin: 0.125rem !important;
+            }
+            .timer, .time-bar-container {
+                font-size: 80px;
+                height: 120px;
+                line-height: 120px;
+                width: 400px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .button {
+                padding: 0.125rem 0.25rem !important;
+                margin: 0.125rem !important;
+            }
+            .timer, .time-bar-container {
+                font-size: 60px;
+                height: 100px;
+                line-height: 100px;
+                width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="timer-container">
+            <div class="time-bar-container" id="timeBarContainer">
+                <div class="time-bar" id="timeBar"></div>
+            </div>
+            <div class="timer" id="timer">00:00:00</div>
+            <button class="button" id="button-1">Start</button>
+            <button class="button" id="button-2">Reset</button>
+            <button class="button" id="button-3">Stop</button>
+        </div>
+    </div>
+
+    <audio id="alarmSound" src="https://</html>github.com/kinetik17/bell-sound/raw/refs/heads/main/bell-98033_2.mp3" preload="auto"></audio>
+
+    <script>
+        const timer = document.getElementById('timer');
+        const startButton = document.getElementById('button-1');
+        const resetButton = document.getElementById('button-2');
+        const stopButton = document.getElementById('button-3');
+        const alarmSound = document.getElementById('alarmSound');
+        const timeBar = document.getElementById('timeBar');
+        const timeBarContainer = document.getElementById('timeBarContainer');
+
+        let interval;
+        let centiseconds = 0;
+        let seconds = 0;
+        let minutes = 0;
+        let alarmInterval;
+        const totalTime = 5 * 60 * 100; // 5 minutes in centiseconds
+
+        function updateTimer() {
+            centiseconds++;
+            if (centiseconds === 100) {
+                centiseconds = 0;
+                seconds++;
+                if (seconds === 60) {
+                    seconds = 0;
+                    minutes++;
+                }
+            }
+            updateDisplay();
+            
+            if (minutes === 5 && seconds === 0 && centiseconds === 0) {
+                stopTimer();
+                startAlarm();
+                startButton.disabled = true;
+            }
+        }
+
+        function updateDisplay() {
+            const formattedCentiseconds = centiseconds < 10 ? '0' + centiseconds : centiseconds;
+            const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
+            const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+            timer.textContent = `${formattedMinutes}:${formattedSeconds}:${formattedCentiseconds}`;
+
+            // Update time bar
+            const currentTime = (minutes * 60 * 100) + (seconds * 100) + centiseconds;
+            const progress = (currentTime / totalTime) * 100;
+            timeBar.style.width = `${progress}%`;
+        }
+
+        function startTimer() {
+            interval = setInterval(updateTimer, 10); // Update every 10 milliseconds (1 centisecond)
+            startButton.disabled = true;
+        }
+
+        function stopTimer() {
+            clearInterval(interval);
+            startButton.disabled = false;
+            stopAlarm();
+        }
+
+        function resetTimer() {
+            clearInterval(interval);
+            centiseconds = 0;
+            seconds = 0;
+            minutes = 0;
+            updateDisplay();
+            startButton.disabled = false;
+            stopAlarm();
+        }
+
+        function startAlarm() {
+            console.log("Starting alarm...");
+            alarmSound.play().catch(error => console.error("Error playing sound:", error));
+            alarmInterval = setInterval(() => {
+                setTimeout(() => {
+                    alarmSound.currentTime = 0;
+                    alarmSound.play().catch(error => console.error("Error playing sound:", error));
+                }, 500); // 0.5 second pause between repeats
+            }, 1500); // Repeat every 1.5 seconds (1 second for sound + 0.5 second pause)
+        }
+
+        function stopAlarm() {
+            console.log("Stopping alarm...");
+            clearInterval(alarmInterval);
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+        }
+
+        function skipToTime(event) {
+            const rect = timeBarContainer.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const clickedProgress = x / rect.width;
+            const newTime = Math.floor(clickedProgress * totalTime);
+
+            minutes = Math.floor(newTime / (60 * 100));
+            seconds = Math.floor((newTime % (60 * 100)) / 100);
+            centiseconds = newTime % 100;
+
+            updateDisplay();
+
+            if (interval) {
+                clearInterval(interval);
+                startTimer();
+            }
+
+            if (minutes === 5 && seconds === 0 && centiseconds === 0) {
+                stopTimer();
+                startAlarm();
+                startButton.disabled = true;
+            }
+        }
+
+        startButton.addEventListener('click', startTimer);
+        stopButton.addEventListener('click', stopTimer);
+        resetButton.addEventListener('click', resetTimer);
+        timeBarContainer.addEventListener('click', skipToTime);
+    </script>
+</body>
+</html>
